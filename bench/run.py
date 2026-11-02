@@ -27,7 +27,7 @@ ADAPTERS = {
     "sluice": "bench.adapters.sluice_adapter",
     "mini-agent-harness": "bench.adapters.mah_adapter",
     "mini-swe-agent": "bench.adapters.msa_adapter",
-    # "pi": "bench.adapters.pi_adapter",  # 待接入（TypeScript，需要额外配置）
+    "pi": "bench.adapters.pi_adapter",
 }
 
 

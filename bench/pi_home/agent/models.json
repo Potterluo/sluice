@@ -1,0 +1,13 @@
+{
+  "$schema": "https://pi.dev/schemas/models.schema.json",
+  "providers": {
+    "gw": {
+      "baseUrl": "https://st8tp3ajl0df3n8b8l8qu.apigateway-cn-beijing.volceapi.com/v1",
+      "api": "openai-completions",
+      "apiKey": "$PI_GATEWAY_KEY",
+      "models": [
+        { "id": "deepseek-v4.1-flash", "name": "deepseek-v4.1-flash", "reasoning": false, "input": ["text"] }
+      ]
+    }
+  }
+}

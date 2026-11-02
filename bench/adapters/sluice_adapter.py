@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 import time
@@ -65,6 +66,12 @@ def run(instance: dict, workspace: Path, container: str, cfg: dict,
     tool_calls = log_text.count("[ * tool]") + log_text.count("⚙")
     judge_calls = log_text.count("[== judge]") + log_text.count("✔ approve") + log_text.count("✘ reject")
 
+    # token 用量：main.py 结尾打印 [usage] prompt=… completion=… calls=…
+    usage = {"prompt": 0, "completion": 0, "calls": 0}
+    m = re.search(r"\[usage\]\s+prompt=(\d+)\s+completion=(\d+)\s+calls=(\d+)", log_text)
+    if m:
+        usage = {"prompt": int(m.group(1)), "completion": int(m.group(2)), "calls": int(m.group(3))}
+
     from bench.adapters.common import git_diff
     patch = git_diff(workspace)
 
@@ -75,6 +82,7 @@ def run(instance: dict, workspace: Path, container: str, cfg: dict,
         "wall_seconds": round(wall, 1),
         "tool_calls": tool_calls,
         "judge_decisions": judge_calls,
+        "tokens": usage,
         "patch": patch,
         "log": str(log_path),
     }

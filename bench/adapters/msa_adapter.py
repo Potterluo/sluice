@@ -57,21 +57,20 @@ def run(instance: dict, workspace: Path, container: str, cfg: dict,
     wall = time.time() - t0
 
     log_text = log_path.read_text(encoding="utf-8", errors="replace")
-    # runner 最后一行输出 {"exit_status":..., "messages": N}
+    # runner 最后一行输出 {"exit_status":..., "messages": N, "usage": {...}}
     steps = 0
+    tokens = {}
     for line in reversed(log_text.splitlines()):
         if line.startswith('{"exit_status"'):
             try:
-                steps = json.loads(line).get("messages", 0)
+                data = json.loads(line)
+                steps = data.get("messages", 0)
+                usage = data.get("usage") or {}
+                tokens = {"prompt": usage.get("prompt", 0), "completion": usage.get("completion", 0),
+                          "calls": usage.get("calls", 0)}
             except json.JSONDecodeError:
                 pass
             break
-        if line.startswith("{"):
-            try:
-                steps = json.loads(line).get("messages", 0)
-                break
-            except json.JSONDecodeError:
-                continue
 
     patch = git_diff(workspace)
     return {
@@ -81,6 +80,7 @@ def run(instance: dict, workspace: Path, container: str, cfg: dict,
         "wall_seconds": round(wall, 1),
         "tool_calls": steps,          # 消息数近似步数（每步一个 assistant+result）
         "judge_decisions": 0,
+        "tokens": tokens,
         "patch": patch,
         "log": str(log_path),
     }

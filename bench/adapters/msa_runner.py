@@ -65,7 +65,16 @@ def main() -> int:
             pass
 
     n_messages = len(getattr(agent, "messages", []))
-    print(json.dumps({"exit_status": exit_status, "messages": n_messages}, ensure_ascii=False))
+    usage = {"calls": getattr(agent, "n_calls", 0), "cost": getattr(agent, "cost", 0.0),
+             "prompt": 0, "completion": 0}
+    # litellm 在消息里回填 usage（若模型价格未知，token 仍在 response 中）
+    for m in getattr(agent, "messages", []):
+        u = (m.get("extra") or {}).get("response", {}).get("usage") if isinstance(m.get("extra"), dict) else None
+        if isinstance(u, dict):
+            usage["prompt"] += int(u.get("prompt_tokens") or 0)
+            usage["completion"] += int(u.get("completion_tokens") or 0)
+    print(json.dumps({"exit_status": exit_status, "messages": n_messages, "usage": usage},
+                     ensure_ascii=False))
     if args.output:
         try:
             Path(args.output).write_text(json.dumps(getattr(agent, "messages", []), ensure_ascii=False),

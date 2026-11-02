@@ -18,8 +18,16 @@ coding harness 的解决率与效率，据此优化 Sluice。
 | --- | --- | --- |
 | **Sluice**（本项目） | 状态机 + 裁决者 + 执行者，纯 Python 标准库 | `main.py --flow flows/swe_bench.json`；shell 工具经 `SLUICE_SHELL_DOCKER` 代理进容器 |
 | **mini-agent-harness** | 分层编码 harness（1.7k 行，103 测试） | `cli.py --cwd <ws> --approval auto`；`HARNESS_SHELL_DOCKER` 代理（vendored 副本 1 处最小改动） |
-| **mini-swe-agent** | 100 行 bash-only agent，线性历史 | `mini -c <cfg> -t <task>`，自带 docker 环境 |
-| **pi**（earendil-works/pi） | TypeScript 全功能 agent | npm 安装，print/JSON 模式（待接入） |
+| **mini-swe-agent** | 100 行 bash-only agent，线性历史 | 程序化 API（`DefaultAgent` + `DockerEnvironment` + `swebench.yaml` 配置），绕开需要 TTY 的 CLI |
+| **pi**（earendil-works/pi） | TypeScript 全功能 agent | 容器内跑：挂载 Linux Node + pi 包 + `models.json`，`pi --mode json --model gw/<model>` |
+
+### 环境依赖（一次性准备）
+
+```bash
+# pi 需要容器内的 Node（评测镜像自带的是 conda Python 环境）
+# 下载 Linux Node v24.9.0 解压到 D:/bench-tools/（或改 pi_adapter._node_dir）
+# 以及 bench/pi_home/agent/models.json 指向你的 OpenAI 兼容网关
+```
 
 ## 公平性设计
 

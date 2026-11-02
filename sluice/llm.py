@@ -81,6 +81,8 @@ class LLMClient:
 
     def __init__(self, config: LLMConfig):
         self.config = config
+        # token 用量累计（评测用：成本核算）
+        self.usage: dict[str, int] = {"prompt": 0, "completion": 0, "calls": 0}
 
     def chat(self, messages: list[dict[str, Any]],
              tools: list[dict[str, Any]] | None = None,
@@ -139,6 +141,12 @@ class LLMClient:
             msg = payload["choices"][0]["message"]
         except (KeyError, IndexError) as e:
             raise LLMError(f"LLM 响应结构异常: {str(payload)[:500]}") from e
+        # 累计 token 用量（网关若返回 usage 则统计，用于成本核算）
+        usage = payload.get("usage") or {}
+        if isinstance(usage, dict):
+            self.usage["prompt"] += int(usage.get("prompt_tokens") or 0)
+            self.usage["completion"] += int(usage.get("completion_tokens") or 0)
+            self.usage["calls"] += 1
         return self._normalize(msg)
 
     @staticmethod

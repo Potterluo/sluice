@@ -23,6 +23,7 @@ GROUPS = [
     ("sluice-v2", RESULTS / "records_pilot_sluice.jsonl", "v2"),
     ("mini-swe-agent", RESULTS / "records_pilot_mini-swe-agent.jsonl", ""),
     ("mini-agent-harness", RESULTS / "records_pilot_mini-agent-harness.jsonl", ""),
+    ("pi", RESULTS / "records_pilot_pi.jsonl", ""),
 ]
 
 

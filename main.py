@@ -128,6 +128,14 @@ def main() -> int:
     ui.banner(flow.name, list(flow.states), args.workspace, judge_desc, worker_desc, goal)
     result = harness.run(goal)
     ui.footer(result, result.visited or renderer.visited)
+    # token 用量（评测用成本核算）：worker + judge 两侧累加
+    usage = {"prompt": 0, "completion": 0, "calls": 0}
+    for side in (getattr(harness.worker, "llm", None), getattr(harness.judge, "llm", None)):
+        u = getattr(side, "usage", None)
+        if isinstance(u, dict):
+            for k in usage:
+                usage[k] += int(u.get(k) or 0)
+    print(f"[usage] prompt={usage['prompt']} completion={usage['completion']} calls={usage['calls']}")
     return 0 if result.delivered else 1
 
 

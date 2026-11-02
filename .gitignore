@@ -43,3 +43,8 @@ logs/
 /*.json
 *.gz
 
+
+# pi 运行时状态（会话/凭证缓存，不入库）
+bench/pi_home/agent/sessions/
+bench/pi_home/agent/auth.json
+bench/pi_home/agent/models-store.json
