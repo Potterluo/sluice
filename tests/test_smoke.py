@@ -400,6 +400,23 @@ def test_stall_request_carries_evidence():
         assert "无可用证据" in req2.evidence
 
 
+def test_stall_request_advanced_forward():
+    """停滞兜底请求会被改写成「向前一步」的具体提案（消除死循环）。"""
+    from sluice.harness import Harness
+    flow = FlowSpec.load(FLOW_PATH)
+    harness = Harness(flow=flow, judge=None, worker_factory=lambda: None,
+                      ask_user=lambda q: "", emit=lambda k, t: None)
+    req = TransitionRequest("VERIFY", "", "[自动驻留请求] 超过单状态最大步数", "证据")
+    out = harness._advance_stalled_request(req, "VERIFY")
+    assert out.to_state == "DELIVER"                 # VERIFY 的唯一前进方向
+    assert "[停滞自动前进]" in out.summary
+    # 已有明确目标 / 非停滞请求不改动
+    ok = TransitionRequest("VERIFY", "DELIVER", "正常请求", "证据")
+    assert harness._advance_stalled_request(ok, "VERIFY").to_state == "DELIVER"
+    other = TransitionRequest("PLAN", "", "普通驻留", "e")
+    assert harness._advance_stalled_request(other, "PLAN").to_state == ""
+
+
 if __name__ == "__main__":
     tests = [(name, fn) for name, fn in sorted(globals().items())
              if name.startswith("test_") and callable(fn)]

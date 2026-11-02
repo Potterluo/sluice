@@ -1,0 +1,13 @@
+{
+  "mini-agent-harness": {
+    "total": 5,
+    "resolved": 1,
+    "patch_bytes": 5557,
+    "wall": 425.49999999999994,
+    "tools": 131,
+    "judge": 144,
+    "resolved_ids": [
+      "pallets__flask-5014"
+    ]
+  }
+}

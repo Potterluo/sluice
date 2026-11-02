@@ -163,6 +163,7 @@ class Harness:
 
     def _consult(self, req, state_name: str) -> JudgeDecision:
         """呈交裁决者，并处理用户提问 / 合法性校验 / 交付校验的有限回合。"""
+        req = self._advance_stalled_request(req, state_name)
         self.emit("request", f"{req.from_state} → {req.to_state}\n{req.summary}")
         decision = self.judge.on_transition_request(req)
 
@@ -180,6 +181,50 @@ class Harness:
             decision = self.judge.correct(problem)
         self.emit("judge", f"{decision.decision} → {decision.next_state}｜{decision.reason}")
         return decision
+
+    # ------------------------------------------------------------ 停滞处理
+
+    def _advance_stalled_request(self, req, state_name: str):
+        """执行者因步数耗尽停滞时，把空目标的兜底请求改成「向前一步」的具体请求。
+
+        问题：执行者停滞 → 合成 to_state="" 的请求 → 裁决者只能驳回 → 同状态再停滞，
+        形成死循环（实测 seaborn 两例就是这样被 Watchdog 终止的）。
+        方案：按「到终态的最短步数」挑一个向前状态作为提案，让裁决者做是/否判断，
+        而不是让它从零想目标。
+        """
+        if req.to_state or not (req.summary or "").startswith("[自动驻留请求]"):
+            return req
+        forward = self._forward_candidates(state_name)
+        if not forward:
+            return req
+        target = forward[0]
+        req.to_state = target
+        req.summary = (req.summary or "").replace(
+            "[自动驻留请求]", f"[停滞自动前进] 步数耗尽，申请转入 {target}")
+        return req
+
+    def _forward_candidates(self, state_name: str) -> list[str]:
+        """当前状态的合法去向里，按「离终态更近」排序的前进候选。"""
+        dist = self._distance_to_terminal()
+        cur = dist.get(state_name, 999)
+        targets = [t for f, t in self.flow.edges if f == state_name and t != state_name]
+        better = [t for t in targets if dist.get(t, 999) < cur]
+        return sorted(better or targets, key=lambda t: dist.get(t, 999))
+
+    def _distance_to_terminal(self) -> dict[str, int]:
+        if getattr(self, "_dist_cache", None) is None:
+            dist = {s: 0 for s, spec in self.flow.states.items() if spec.terminal}
+            frontier = list(dist)
+            while frontier:
+                nxt = []
+                for cur in frontier:
+                    for src, t in self.flow.edges:
+                        if t == cur and src not in dist:
+                            dist[src] = dist[cur] + 1
+                            nxt.append(src)
+                frontier = nxt
+            self._dist_cache = dist
+        return self._dist_cache
 
     def _validate(self, decision: JudgeDecision, state_name: str) -> str | None:
         """返回 None 表示合法，否则返回给裁决者的纠错说明。"""

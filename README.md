@@ -174,6 +174,50 @@ decision models），实现一个新类即可。
 - Jev 判定质量可用：exit/entry/criterion 概率与证据强度一致，终态交付门槛逐条核验；
 - 轻模型做裁决 + 强模型做执行的分模型配置可行（对应 Super-agent 的 Router/Worker 配模哲学）。
 
+## SWE-bench 横向评测与优化（2026-11-02）
+
+用官方 **SWE-bench Verified** 在同一模型（`deepseek-v4.1-flash`）下横向对比 harness：
+
+| harness | 定位 | 接入方式 |
+| --- | --- | --- |
+| **Sluice**（本项目） | 状态机 + 裁决者 + 执行者 | `flows/swe_bench.json`（定位→复现→修复→验证→交付），shell 经 `SLUICE_SHELL_DOCKER` 代理进容器 |
+| **mini-swe-agent** | 100 行 bash-only agent（官方基线） | 程序化 API + docker 环境，同一镜像同一工作区 |
+| **mini-agent-harness** | 分层编码 harness | `cli.py --approval auto`，shell 经 `HARNESS_SHELL_DOCKER` 代理 |
+| **pi** | TypeScript 全功能 agent | 待接入（需要额外容器化改造） |
+
+评测栈要点（详见 [bench/README.md](bench/README.md)、[docs/harness-bench.md](docs/harness-bench.md)）：
+
+- 镜像用 LogicStar 压缩包（5.4GB = 全部 500 例，走 hf-mirror 国内直连，无需代理）；
+  Docker 数据盘在 C 盘，因此**只选择性加载**需要的镜像（`tools/select_load_images.py`），
+  大归档解压到 D 盘，避免写爆系统盘。
+- 修了 6 个环境坑（Docker Hub 被墙、swebench 在 Windows 写出 CRLF 的 eval.sh、
+  GBK 写盘崩溃、镜像基线脏、requests 测试依赖网络等），修复后**金标准 5/5 resolved**。
+- 公平性：同一工作区（镜像 `/testbed` 的 bind mount）、同一容器环境、同一模型与步数预算、
+  统一 `git diff` 取 patch、官方 swebench 评分、统计是否改测试文件。
+
+评测结果（pilot 子集 5 例，官方 swebench 评分，原始数据见
+[bench/results/final_comparison.md](bench/results/final_comparison.md)）：
+
+| harness | resolved | 平均墙钟 | 平均步数 | 平均 patch |
+| --- | --- | --- | --- | --- |
+| **Sluice v2（优化后）** | **5/5** | 868s | 83 | 1.3KB |
+| mini-swe-agent（100 行基线） | 5/5 | 227s | 49 | 2.6KB |
+| Sluice v1（优化前） | 2/3 | 653s | 80 | 4.4KB |
+| mini-agent-harness | 1/5 | 85s | 26 | 1.1KB |
+
+解读：优化后 Sluice 与极简基线 **resolve 打平（5/5）**，代价是 3.8× 墙钟时间——
+状态机 + 裁决换来的「过程可审计、责任可追」有明确成本。没有任何 harness 修改测试文件作弊。
+
+评测驱动出的 Sluice 优化（v1 → v2，代码已进主干）：
+
+| # | 评测暴露的问题 | 修复 | 效果 |
+| --- | --- | --- | --- |
+| 1 | 执行者步数耗尽会合成「空目标」请求 → 裁决者只能驳回 → 同状态再停滞，死循环（seaborn 两例因此被 Watchdog 终止） | **停滞自动前进**：`Harness._advance_stalled_request` 按「到终态最短步数」挑一个向前状态作为提案 | v1 的 3 例中 2 例失败 → v2 全部交付 |
+| 2 | 单状态 10 步预算对真实仓库偏紧 | `max_steps_per_state` 10 → 15 | flask 265s → 158s |
+| 3 | worker 把 `fix_evidence.log`/`repro_*.py` 写进仓库污染 patch | 状态机要求证据写进 `summary/evidence` 字段 | patch 6.9KB（含 4 个垃圾文件）→ 435B（只含真实修复） |
+
+结果表与逐例明细见 [bench/results/final_comparison.md](bench/results/final_comparison.md)（运行 `python bench/final_eval.py` 可复现）。
+
 ## 借鉴 Super-agent 的三项落地（P0）
 
 对照 DeepSeek Super-agent 设计的分析见 [docs/superagent-vs-sluice.md](docs/superagent-vs-sluice.md)。

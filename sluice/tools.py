@@ -5,6 +5,7 @@ request_transition 不是这里的工具——它是控制面通道，由 Worker
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -115,12 +116,22 @@ class ToolBox:
             return "[错误] shell 已被禁用"
         if not command.strip():
             return "[错误] 空命令"
+        # 评测场景：命令代理进容器执行（评测镜像里有正确 conda 环境），
+        # 文件工具仍直接操作绑定挂载的同一份工作区，因此改动对容器立即可见。
+        shell_target = os.environ.get("SLUICE_SHELL_DOCKER")
         try:
-            proc = subprocess.run(
-                command, shell=True, cwd=self.root,
-                capture_output=True, text=True, timeout=self.shell_timeout,
-                encoding="utf-8", errors="replace",
-            )
+            if shell_target:
+                proc = subprocess.run(
+                    ["docker", "exec", "-w", "/testbed", shell_target, "bash", "-lc", command],
+                    capture_output=True, text=True, timeout=self.shell_timeout,
+                    encoding="utf-8", errors="replace",
+                )
+            else:
+                proc = subprocess.run(
+                    command, shell=True, cwd=self.root,
+                    capture_output=True, text=True, timeout=self.shell_timeout,
+                    encoding="utf-8", errors="replace",
+                )
         except subprocess.TimeoutExpired:
             return f"[错误] 命令超时（>{self.shell_timeout}s）"
         out = (proc.stdout or "") + (("\n[stderr]\n" + proc.stderr) if proc.stderr else "")

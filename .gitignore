@@ -26,3 +26,20 @@ compare_results.json
 .vscode/
 Thumbs.db
 .DS_Store
+
+# ---- SWE-bench 评测相关 ----
+# 第三方 harness 源码（按需下载，不入库）
+bench/vendor/
+# 数据集与镜像归档（大文件）
+bench/data/
+bench/workspaces/
+bench/configs/
+# 运行产物
+bench/results/logs/
+bench/results/workspaces/
+.runs/
+logs/
+# swebench 在仓库根写出的报告
+/*.json
+*.gz
+

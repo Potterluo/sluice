@@ -1,0 +1,95 @@
+{
+  "name": "swe_bench_fix",
+  "initial": "LOCATE",
+  "max_steps_per_state": 15,
+  "max_cycles": 14,
+  "delivery_criteria": [
+    "工作区中存在针对该 issue 的代码改动（git diff 非空）",
+    "改动通过了 FAIL_TO_PASS 指定的测试",
+    "未改动测试文件本身来伪造通过"
+  ],
+  "states": {
+    "LOCATE": {
+      "description": "定位：读懂 issue，找到需要修改的文件与函数",
+      "worker_goal": "阅读 issue 描述与仓库结构，定位相关源码文件（必要时用 grep/read_file），明确要改什么、在哪里改。不要在本状态修改源码。证据通过 request_transition 的 summary/evidence 字段提交，不要在仓库里创建日志、复现脚本或说明文件。",
+      "entry_conditions": [
+        "收到 issue 描述"
+      ],
+      "exit_conditions": [
+        "已指出至少一个需要修改的具体文件与函数/位置",
+        "已说明修改思路"
+      ],
+      "deliverable": "定位结论：文件路径 + 修改点"
+    },
+    "REPRODUCE": {
+      "description": "复现：用仓库自带测试或最小脚本确认问题存在",
+      "worker_goal": "运行与 issue 相关的测试（例如 pytest 指定用例）或最小复现命令，拿到失败输出作为基线证据。允许失败，失败即证据。复现命令与输出写进 summary/evidence 字段，不要往仓库里落日志或临时脚本文件。",
+      "entry_conditions": [
+        "已完成定位"
+      ],
+      "exit_conditions": [
+        "已获得明确的失败输出（测试名或异常栈）"
+      ],
+      "deliverable": "失败复现输出"
+    },
+    "FIX": {
+      "description": "修复：最小改动修改源码",
+      "worker_goal": "针对根因做最小必要修改，只改源码不动测试文件。改动后立刻用测试验证，不要夹带无关重构。证据（改了哪些文件、测试前后对比）写进 summary/evidence，不要在仓库里创建说明文件。",
+      "entry_conditions": [
+        "已复现失败"
+      ],
+      "exit_conditions": [
+        "源码已修改且改动范围聚焦",
+        "已初步验证测试行为变化"
+      ],
+      "deliverable": "源码改动"
+    },
+    "TEST": {
+      "description": "验证：跑通过/回归测试",
+      "worker_goal": "运行 issue 相关测试与必要的回归测试，给出真实执行输出（命令 + 结果）写进 summary/evidence。若仍失败，回到 FIX 继续。不要在仓库里创建验证脚本或日志文件。",
+      "entry_conditions": [
+        "已有源码改动"
+      ],
+      "exit_conditions": [
+        "相关测试通过",
+        "无新增回归失败"
+      ],
+      "deliverable": "测试通过输出"
+    },
+    "DELIVER": {
+      "description": "交付：由裁决者核验改动与测试结果",
+      "worker_goal": "（终态，无执行者工作）",
+      "terminal": true
+    }
+  },
+  "edges": [
+    [
+      "LOCATE",
+      "REPRODUCE"
+    ],
+    [
+      "REPRODUCE",
+      "FIX"
+    ],
+    [
+      "FIX",
+      "TEST"
+    ],
+    [
+      "TEST",
+      "FIX"
+    ],
+    [
+      "TEST",
+      "DELIVER"
+    ],
+    [
+      "REPRODUCE",
+      "LOCATE"
+    ],
+    [
+      "FIX",
+      "LOCATE"
+    ]
+  ]
+}
