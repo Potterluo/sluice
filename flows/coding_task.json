@@ -1,0 +1,55 @@
+{
+  "name": "coding_task",
+  "initial": "CLARIFY",
+  "max_steps_per_state": 25,
+  "max_cycles": 40,
+  "delivery_criteria": [
+    "工作区内存在可运行的交付代码",
+    "验证状态留下了真实的执行证据（测试/运行输出）",
+    "最终答案中说明产物位置与用法"
+  ],
+  "states": {
+    "CLARIFY": {
+      "description": "澄清需求：把用户目标变成无歧义的需求说明",
+      "worker_goal": "分析用户目标，必要时列出假设，写出 requirements.md（需求点、约束、验收标准）",
+      "entry_conditions": ["收到用户目标"],
+      "exit_conditions": ["requirements.md 覆盖需求点、约束与验收标准", "不存在必须询问用户的阻塞性歧义"],
+      "deliverable": "requirements.md 及其要点摘要"
+    },
+    "PLAN": {
+      "description": "方案设计：给出实现路径与任务分解",
+      "worker_goal": "基于需求写出 plan.md：技术选型、模块划分、实施步骤、风险",
+      "entry_conditions": ["requirements.md 已就绪"],
+      "exit_conditions": ["plan.md 含可执行的步骤序列", "步骤与需求点可追溯"],
+      "deliverable": "plan.md 及步骤摘要"
+    },
+    "IMPLEMENT": {
+      "description": "编码实现：按计划产出代码",
+      "worker_goal": "按 plan.md 在工作区实现代码，保持小步提交、自解释命名",
+      "entry_conditions": ["plan.md 已就绪"],
+      "exit_conditions": ["计划中的每个步骤都有对应代码", "代码可被解释器/编译器通过"],
+      "deliverable": "源代码文件清单"
+    },
+    "VERIFY": {
+      "description": "验证：运行代码、修复缺陷",
+      "worker_goal": "运行/测试工作区代码，记录输出；失败则修复后重验或请求退回 IMPLEMENT",
+      "entry_conditions": ["代码已产出"],
+      "exit_conditions": ["存在成功运行的输出证据", "无已知未修复缺陷"],
+      "deliverable": "运行/测试输出摘要"
+    },
+    "DELIVER": {
+      "description": "交付：裁决者核对交付标准，产出最终答案",
+      "worker_goal": "（终态，无执行者工作）",
+      "terminal": true
+    }
+  },
+  "edges": [
+    ["CLARIFY", "PLAN"],
+    ["PLAN", "IMPLEMENT"],
+    ["PLAN", "CLARIFY"],
+    ["IMPLEMENT", "VERIFY"],
+    ["IMPLEMENT", "PLAN"],
+    ["VERIFY", "IMPLEMENT"],
+    ["VERIFY", "DELIVER"]
+  ]
+}

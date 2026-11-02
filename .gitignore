@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.venv/
+venv/
+
+# 运行产物（每次运行的工作区，勿入库）
+workspace/
+real_ws*/
+ui_real*/
+demo*/
+
+# 本地日志与评测输出（样例已归档到 docs/）
+*.log
+compare_results.json
+
+# 密钥与环境
+.env
+.env.*
+!.env.example
+
+# IDE / 系统
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store
