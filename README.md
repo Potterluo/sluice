@@ -176,6 +176,9 @@ decision models），实现一个新类即可。
 
 ## SWE-bench 横向评测与优化（2026-11-02）
 
+> 想在本地跑通 SWE-bench？看这篇独立指南：[**docs/swebench-guide.md**](docs/swebench-guide.md)
+> —— 数据集（hf-mirror）、压缩镜像、参数配置、运行、结果解读，配真实终端截图。
+
 用官方 **SWE-bench Verified** 在同一模型（`deepseek-v4.1-flash`）下横向对比 harness：
 
 | harness | 定位 | 接入方式 |
